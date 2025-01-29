@@ -10,5 +10,3 @@
 - 😄 Pronouns: He.
 - ⚡ Fun fact: I used Arduino IDE.
 
--THIS IS THE TRAINING CHANGE
-- Learning step 2.
