@@ -98,8 +98,8 @@ A browser simulation of my line follower. Change Kp, Ki, Kd and base PWM and wat
 </p>
 
 <p align="center">
-  <picture><img src="assets/dragon.svg" width="100%"
-       alt="Soplón, a long crimson Chinese-style dragon, glides across the profile, loops in the middle, looks at you and breathes fire." /></picture>
+  <picture><img src="assets/dragon-contrib.svg" width="100%"
+       alt="Contribution calendar for the last 12 months. Soplón the dragon leaves his nest, eats the days from the fewest contributions to the most, flies home, and the calendar grows back." /></picture>
 </p>
 
 <p align="center">
