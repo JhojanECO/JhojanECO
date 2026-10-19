@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PID Line Follower Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: a competition bench. The track is the hero; controls and telemetry sit beside it like an instrument rack. */
+  :root {
+    --bg: #0D1117;
+    --panel: #161B22;
+    --line: #30363D;
+    --fg: #E6EDF3;
+    --muted: #8B949E;
+    --crimson: #DC143C;
+    --crimson-soft: rgba(220, 20, 60, 0.16);
+    --cyan: #00F0FF;
+    --tape: #E6EDF3;
+    --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 40px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+
+  header { display: grid; gap: 6px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4.4vw, 44px); line-height: 1.05; margin: 0; text-wrap: balance; }
+  h1 span { color: var(--crimson); }
+  .lede { margin: 0; color: var(--muted); max-width: 66ch; }
+
+  .bench { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  #field { display: block; width: 100%; height: auto; aspect-ratio: 900 / 520; max-width: 100%; }
+  .hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+  .chip { font-family: var(--font-mono); font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(13, 17, 23, 0.85); border: 1px solid var(--line); color: var(--fg); font-variant-numeric: tabular-nums; }
+  .chip b { color: var(--muted); font-weight: 400; margin-right: 6px; }
+  .chip.state-run { border-color: var(--cyan); color: var(--cyan); }
+  .chip.state-lost { border-color: var(--crimson); color: var(--crimson); background: rgba(40, 6, 14, 0.9); }
+
+  .rack { display: grid; gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+  .card h2 { font-family: var(--font-display); font-size: 15px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--muted); }
+
+  .gain { display: grid; gap: 6px; }
+  .gain-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .gain label { font-weight: 600; }
+  .gain label small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .gain output { font-family: var(--font-mono); color: var(--cyan); font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; accent-color: var(--crimson); height: 22px; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: 500 13px var(--font-body); color: var(--fg); background: transparent;
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--crimson); background: var(--crimson-soft); }
+  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.primary { background: var(--crimson); border-color: var(--crimson); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+  .pwm { display: grid; grid-template-columns: 54px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-family: var(--font-mono); font-size: 13px; }
+  .pwm span:first-child { color: var(--muted); }
+  .bar { position: relative; height: 16px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--crimson); width: 0; }
+  .bar u { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--cyan); }
+  .pwm strong { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .sensors { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  .sensors div { height: 22px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); }
+  .readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-family: var(--font-mono); font-size: 13px; }
+  .readout div { display: grid; gap: 2px; }
+  .readout span { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .readout strong { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 900px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+  #scope { display: block; width: 100%; height: 180px; max-width: 100%; }
+  pre { margin: 0; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  pre .k { color: var(--crimson); }
+  pre .v { color: var(--cyan); }
+  pre .c { color: var(--muted); }
+
+  footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 16px; }
+  footer a { color: var(--fg); }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Line follower · PID tuning bench</div>
+    <h1>PID Line Follower <span>Lab</span></h1>
+    <p class="lede">Tune the controller of a differential-drive line follower and watch what each gain does to the left and right motor PWM (0 to 255). The robot reads the tape with an 8-sensor array, the same way a QTR-8 does: position runs from 0 to 7000, and the error is position − 3500.</p>
+  </header>
+
+  <section class="bench">
+    <div class="stage">
+      <canvas id="field" width="900" height="520" aria-label="Track with the line follower robot"></canvas>
+      <div class="hud">
+        <span class="chip state-run" id="state">Running</span>
+        <span class="chip"><b>lap</b><span id="lap">0.00 s</span></span>
+        <span class="chip"><b>best</b><span id="best">--</span></span>
+        <span class="chip"><b>laps</b><span id="laps">0</span></span>
+      </div>
+    </div>
+
+    <div class="rack">
+      <div class="card">
+        <h2>Controller</h2>
+        <div class="gain">
+          <div class="gain-top"><label for="kp">Kp <small>proportional</small></label><output id="kpOut" for="kp"></output></div>
+          <input type="range" id="kp" min="0" max="0.6" step="0.01">
+        </div>
+        <div class="gain">
+          <div class="gain-top"><label for="ki">Ki <small>integral</small></label><output id="kiOut" for="ki"></output></div>
+          <input type="range" id="ki" min="0" max="0.0005" step="0.00001">
+        </div>
+        <div class="gain">
+          <div class="gain-top"><label for="kd">Kd <small>derivative</small></label><output id="kdOut" for="kd"></output></div>
+          <input type="range" id="kd" min="0" max="10" step="0.1">
+        </div>
+        <div class="gain">
+          <div class="gain-top"><label for="base">Base PWM <small>straight-line speed</small></label><output id="baseOut" for="base"></output></div>
+          <input type="range" id="base" min="0" max="255" step="1">
+        </div>
+        <div class="presets" aria-label="Presets">
+          <button type="button" data-preset="tuned">Tuned</button>
+          <button type="button" data-preset="ponly">Only P</button>
+          <button type="button" data-preset="lazy">Too gentle</button>
+          <button type="button" data-preset="race">Full throttle</button>
+        </div>
+        <div class="row">
+          <button type="button" class="primary" id="reset">Restart run</button>
+          <button type="button" id="pause">Pause</button>
+          <button type="button" id="slow" aria-pressed="false">Slow motion</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Telemetry</h2>
+        <div class="sensors" id="sensors" aria-label="Sensor array readings"></div>
+        <div class="pwm"><span>PWM_L</span><div class="bar"><i id="barL"></i><u id="baseL"></u></div><strong id="pwmL">0</strong></div>
+        <div class="pwm"><span>PWM_R</span><div class="bar"><i id="barR"></i><u id="baseR"></u></div><strong id="pwmR">0</strong></div>
+        <div class="readout">
+          <div><span>error</span><strong id="err">0</strong></div>
+          <div><span>correction</span><strong id="corr">0</strong></div>
+        </div>
+        <p class="hint">The cyan tick marks your base PWM. The correction pushes one motor above it and the other below it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="card">
+      <h2>Error over time</h2>
+      <canvas id="scope" width="600" height="180" aria-label="Error signal over the last seconds"></canvas>
+      <p class="hint">A flat line near zero means the robot rides the center of the tape. Waves mean it is oscillating; raise Kd to damp them.</p>
+    </div>
+    <div class="card">
+      <h2>The same loop in C++</h2>
+      <pre id="code"></pre>
+    </div>
+  </section>
+
+  <footer>
+    <span>Built by Jhojan Espinoza · Mechatronics Engineering, UNI</span>
+    <a href="https://github.com/JhojanECO">github.com/JhojanECO</a>
+  </footer>
+</div>
+
+<script>
+// PID line follower: track geometry, sensors, controller and differential-drive physics.
+// Pure logic (no DOM) so it can run in the browser and in Node tests.
+
+const TRACK_SEGMENTS = [
+  // cubic Bezier segments [p0, c1, c2, p3] in a 900 x 520 field (px, y down)
+  [[150, 260], [150, 120], [300, 80], [420, 140]],
+  [[420, 140], [520, 190], [560, 90], [680, 90]],
+  [[680, 90], [800, 90], [800, 230], [720, 270]],
+  [[720, 270], [640, 310], [780, 380], [700, 440]],
+  [[700, 440], [620, 490], [470, 420], [400, 440]],
+  [[400, 440], [300, 470], [150, 430], [150, 260]],
+];
+
+function bez(s, t) {
+  const u = 1 - t;
+  const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  return [
+    a * s[0][0] + b * s[1][0] + c * s[2][0] + d * s[3][0],
+    a * s[0][1] + b * s[1][1] + c * s[2][1] + d * s[3][1],
+  ];
+}
+
+function sampleTrack(perSeg = 260) {
+  const pts = [];
+  for (const s of TRACK_SEGMENTS) for (let i = 0; i < perSeg; i++) pts.push(bez(s, i / perSeg));
+  return pts;
+}
+
+const CFG = {
+  lineWidth: 16,        // black tape, in px (field units)
+  sensors: 8,           // QTR-8 style array
+  sensorPitch: 7,       // px between sensors
+  lookahead: 30,        // sensor bar ahead of the wheel axle
+  wheelbase: 34,
+  vmax: 480,            // px/s at PWM 255
+  dt: 1 / 240,          // control + physics step
+  lostTimeout: 1.0,     // s without seeing the line -> robot is lost
+  motorTau: 0.12,       // motor + inertia time constant (s): wheels can't change speed instantly
+};
+
+function createSim(trackPts) {
+  const N = trackPts.length;
+  const st = {};
+
+  function reset() {
+    st.x = 150; st.y = 268; st.th = -Math.PI / 2;
+    st.integral = 0; st.lastErr = 0; st.lastPos = 3500;
+    st.pwmL = 0; st.pwmR = 0; st.vl = 0; st.vr = 0; st.err = 0; st.corr = 0;
+    st.readings = new Array(CFG.sensors).fill(0);
+    st.lostFor = 0; st.lost = false;
+    st.t = 0; st.lapStart = 0; st.dist = 0; st.lastLap = null; st.bestLap = null; st.laps = 0;
+    st.near = 0;
+  }
+
+  function nearestDist(px, py) {
+    // local search around the last nearest index, wrapping around the closed track
+    let best = Infinity, bi = st.near;
+    const W = 120;
+    for (let k = -W; k <= W; k++) {
+      const i = (st.near + k + N) % N;
+      const dx = trackPts[i][0] - px, dy = trackPts[i][1] - py;
+      const d = dx * dx + dy * dy;
+      if (d < best) { best = d; bi = i; }
+    }
+    return [Math.sqrt(best), bi];
+  }
+
+  function readSensors() {
+    const hx = Math.cos(st.th), hy = Math.sin(st.th);
+    const rx = -hy, ry = hx; // robot's right (y down)
+    const cx = st.x + CFG.lookahead * hx, cy = st.y + CFG.lookahead * hy;
+    const [, ci] = nearestDist(cx, cy);
+    st.near = ci;
+    let num = 0, den = 0;
+    for (let i = 0; i < CFG.sensors; i++) {
+      const off = (i - (CFG.sensors - 1) / 2) * CFG.sensorPitch;
+      const sx = cx + off * rx, sy = cy + off * ry;
+      const [d] = nearestDist(sx, sy);
+      // analog-ish reflectance: 1000 on the tape, fading over the tape edge
+      const half = CFG.lineWidth / 2;
+      let v = d <= half - 2 ? 1000 : d >= half + 4 ? 0 : Math.round(1000 * (half + 4 - d) / 6);
+      st.readings[i] = v;
+      num += v * i * 1000; den += v;
+    }
+    let pos;
+    if (den < 200) pos = st.lastPos > 3500 ? 7000 : 0; // line lost: remember which side it was on
+    else pos = num / den;
+    st.lastPos = pos;
+    return { pos, seen: den >= 200 };
+  }
+
+  function step(p) {
+    const { pos, seen } = readSensors();
+    const err = pos - 3500;
+    st.integral = Math.max(-200000, Math.min(200000, st.integral + err));
+    const corr = p.kp * err + p.ki * st.integral + p.kd * (err - st.lastErr);
+    st.lastErr = err;
+    st.err = err; st.corr = corr;
+    st.pwmL = Math.max(0, Math.min(255, Math.round(p.base + corr)));
+    st.pwmR = Math.max(0, Math.min(255, Math.round(p.base - corr)));
+
+    const a = CFG.dt / (CFG.motorTau + CFG.dt);
+    st.vl += a * (st.pwmL / 255 * CFG.vmax - st.vl);
+    st.vr += a * (st.pwmR / 255 * CFG.vmax - st.vr);
+    const v = (st.vl + st.vr) / 2, w = (st.vl - st.vr) / CFG.wheelbase;
+    st.th += w * CFG.dt;
+    st.x += v * Math.cos(st.th) * CFG.dt;
+    st.y += v * Math.sin(st.th) * CFG.dt;
+    st.dist += v * CFG.dt;
+    st.t += CFG.dt;
+
+    st.lostFor = seen ? 0 : st.lostFor + CFG.dt;
+    if (st.lostFor > CFG.lostTimeout || st.x < -40 || st.x > 940 || st.y < -40 || st.y > 560) st.lost = true;
+
+    // lap: back near the start line after covering most of the track
+    if (st.dist > 1500 && Math.hypot(st.x - 150, st.y - 260) < 26) {
+      st.lastLap = st.t - st.lapStart;
+      st.bestLap = st.bestLap == null ? st.lastLap : Math.min(st.bestLap, st.lastLap);
+      st.lapStart = st.t; st.dist = 0; st.laps++;
+    }
+  }
+
+  reset();
+  return { st, step, reset };
+}
+
+if (typeof module !== "undefined") module.exports = { TRACK_SEGMENTS, sampleTrack, createSim, CFG };
+
+(() => {
+  const pts = sampleTrack();
+  const sim = createSim(pts);
+  const st = sim.st;
+  const $ = (id) => document.getElementById(id);
+
+  const PRESETS = {
+    tuned: { kp: 0.2, ki: 0, kd: 3, base: 200 },
+    ponly: { kp: 0.1, ki: 0, kd: 0, base: 200 },
+    lazy:  { kp: 0.03, ki: 0, kd: 0, base: 200 },
+    race:  { kp: 0.4, ki: 0, kd: 6, base: 255 },
+  };
+  const p = { ...PRESETS.tuned };
+
+  const sliders = ["kp", "ki", "kd", "base"];
+  const fmt = { kp: (v) => v.toFixed(2), ki: (v) => v.toFixed(5), kd: (v) => v.toFixed(1), base: (v) => String(Math.round(v)) };
+  function syncInputs() {
+    for (const k of sliders) { $(k).value = p[k]; $(k + "Out").textContent = fmt[k](p[k]); }
+    const pct = (p.base / 255 * 100) + "%";
+    $("baseL").style.left = pct; $("baseR").style.left = pct;
+    renderCode();
+  }
+  for (const k of sliders) {
+    $(k).addEventListener("input", () => { p[k] = parseFloat($(k).value); syncInputs(); });
+  }
+  document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => {
+    Object.assign(p, PRESETS[b.dataset.preset]); syncInputs(); restart();
+  }));
+
+  let paused = false, slow = false, lostAt = null;
+  const scopeBuf = [];
+  const trail = [];
+  function restart() { sim.reset(); scopeBuf.length = 0; trail.length = 0; lostAt = null; setState("run"); }
+  $("reset").addEventListener("click", restart);
+  $("pause").addEventListener("click", () => { paused = !paused; $("pause").textContent = paused ? "Resume" : "Pause"; setState(paused ? "pause" : "run"); });
+  $("slow").addEventListener("click", () => { slow = !slow; $("slow").setAttribute("aria-pressed", String(slow)); $("slow").textContent = slow ? "Normal speed" : "Slow motion"; });
+
+  function setState(s) {
+    const el = $("state");
+    el.className = "chip " + (s === "lost" ? "state-lost" : s === "run" ? "state-run" : "");
+    el.textContent = s === "lost" ? "Lost the line, restarting" : s === "pause" ? "Paused" : "Running";
+  }
+
+  const sensorsEl = $("sensors");
+  const cells = [];
+  for (let i = 0; i < 8; i++) { const d = document.createElement("div"); sensorsEl.appendChild(d); cells.push(d); }
+
+  function renderCode() {
+    $("code").innerHTML =
+`<span class="c">// one control step, called every loop</span>
+<span class="k">const float</span> Kp = <span class="v">${p.kp.toFixed(2)}</span>, Ki = <span class="v">${p.ki.toFixed(5)}</span>, Kd = <span class="v">${p.kd.toFixed(1)}</span>;
+<span class="k">const int</span>   BASE = <span class="v">${Math.round(p.base)}</span>;
+
+<span class="k">int</span> position = qtr.readLineBlack(sensorValues); <span class="c">// 0..7000</span>
+<span class="k">int</span> error = position - 3500;
+integral += error;
+<span class="k">int</span> correction = Kp * error + Ki * integral + Kd * (error - lastError);
+lastError = error;
+
+<span class="k">int</span> pwmL = constrain(BASE + correction, 0, 255);
+<span class="k">int</span> pwmR = constrain(BASE - correction, 0, 255);
+analogWrite(MOTOR_L, pwmL);
+analogWrite(MOTOR_R, pwmR);`;
+  }
+
+  // ---------- drawing ----------
+  const field = $("field"), fctx = field.getContext("2d");
+  const scope = $("scope"), sctx = scope.getContext("2d");
+  const css = getComputedStyle(document.documentElement);
+  const C = (n) => css.getPropertyValue(n).trim();
+  const COL = { bg: C("--bg"), panel: C("--panel"), line: C("--line"), tape: C("--tape"), crimson: C("--crimson"), cyan: C("--cyan"), muted: C("--muted") };
+
+  const trackPath = new Path2D();
+  for (const s of TRACK_SEGMENTS) {
+    trackPath.moveTo(s[0][0], s[0][1]);
+    trackPath.bezierCurveTo(s[1][0], s[1][1], s[2][0], s[2][1], s[3][0], s[3][1]);
+  }
+
+  function fitCanvas(cv, w, h) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = cv.getBoundingClientRect();
+    const W = Math.max(1, Math.round(rect.width * dpr)), H = Math.max(1, Math.round((h ? rect.height : rect.width * 520 / 900) * dpr));
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    return { W, H, dpr };
+  }
+
+  function drawField() {
+    const { W, H } = fitCanvas(field);
+    const s = W / 900;
+    fctx.setTransform(1, 0, 0, 1, 0, 0);
+    fctx.fillStyle = COL.panel; fctx.fillRect(0, 0, W, H);
+    fctx.setTransform(s, 0, 0, s, 0, 0);
+    // grid like a competition mat
+    fctx.fillStyle = COL.line;
+    for (let x = 30; x < 900; x += 30) for (let y = 30; y < 520; y += 30) fctx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
+    // tape
+    fctx.lineCap = "round"; fctx.lineJoin = "round";
+    fctx.strokeStyle = COL.tape; fctx.lineWidth = CFG.lineWidth; fctx.stroke(trackPath);
+    // start line
+    fctx.fillStyle = COL.crimson; fctx.fillRect(132, 258, 36, 4);
+    // trail
+    if (trail.length > 1) {
+      fctx.strokeStyle = COL.cyan; fctx.globalAlpha = 0.35; fctx.lineWidth = 2;
+      fctx.beginPath(); fctx.moveTo(trail[0][0], trail[0][1]);
+      for (const t of trail) fctx.lineTo(t[0], t[1]);
+      fctx.stroke(); fctx.globalAlpha = 1;
+    }
+    // robot
+    fctx.save();
+    fctx.translate(st.x, st.y); fctx.rotate(st.th);
+    fctx.fillStyle = COL.line;
+    fctx.fillRect(-10, -CFG.wheelbase / 2 - 5, 20, 7);
+    fctx.fillRect(-10, CFG.wheelbase / 2 - 2, 20, 7);
+    fctx.fillStyle = COL.bg; fctx.strokeStyle = COL.crimson; fctx.lineWidth = 3;
+    roundRect(fctx, -16, -CFG.wheelbase / 2 + 2, 30, CFG.wheelbase - 4, 6); fctx.fill(); fctx.stroke();
+    fctx.strokeStyle = COL.line; fctx.lineWidth = 3;
+    fctx.beginPath(); fctx.moveTo(14, 0); fctx.lineTo(CFG.lookahead, 0); fctx.stroke();
+    fctx.fillStyle = COL.line;
+    fctx.fillRect(CFG.lookahead - 3, -CFG.sensorPitch * 4, 6, CFG.sensorPitch * 8);
+    for (let i = 0; i < 8; i++) {
+      const v = st.readings[i] / 1000;
+      fctx.fillStyle = COL.cyan; fctx.globalAlpha = 0.25 + 0.75 * v;
+      fctx.beginPath(); fctx.arc(CFG.lookahead, (i - 3.5) * CFG.sensorPitch, 2.4, 0, Math.PI * 2); fctx.fill();
+    }
+    fctx.globalAlpha = 1;
+    fctx.restore();
+  }
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+
+  function drawScope() {
+    const { W, H, dpr } = fitCanvas(scope, null, true);
+    sctx.setTransform(1, 0, 0, 1, 0, 0);
+    sctx.fillStyle = COL.bg; sctx.fillRect(0, 0, W, H);
+    const pad = 34 * dpr, ym = (v) => H / 2 - (v / 3500) * (H / 2 - 12 * dpr);
+    sctx.font = `${11 * dpr}px ${C("--font-mono")}`; sctx.fillStyle = COL.muted; sctx.textBaseline = "middle";
+    for (const v of [3500, 0, -3500]) {
+      sctx.strokeStyle = v === 0 ? COL.muted : COL.line; sctx.lineWidth = dpr;
+      sctx.beginPath(); sctx.moveTo(pad, ym(v)); sctx.lineTo(W, ym(v)); sctx.stroke();
+      sctx.fillText(v > 0 ? "+3500" : String(v), 2 * dpr, ym(v));
+    }
+    if (scopeBuf.length > 1) {
+      const n = 600, dx = (W - pad) / (n - 1);
+      sctx.strokeStyle = COL.cyan; sctx.lineWidth = 1.6 * dpr; sctx.beginPath();
+      const off = n - scopeBuf.length;
+      scopeBuf.forEach((v, i) => { const x = pad + (off + i) * dx, y = ym(v); i ? sctx.lineTo(x, y) : sctx.moveTo(x, y); });
+      sctx.stroke();
+    }
+  }
+
+  function updateTelemetry() {
+    $("barL").style.width = (st.pwmL / 255 * 100) + "%";
+    $("barR").style.width = (st.pwmR / 255 * 100) + "%";
+    $("pwmL").textContent = st.pwmL; $("pwmR").textContent = st.pwmR;
+    $("err").textContent = Math.round(st.err);
+    $("corr").textContent = (st.corr >= 0 ? "+" : "") + Math.round(st.corr);
+    cells.forEach((c, i) => { const v = st.readings[i] / 1000; c.style.background = `rgba(0, 240, 255, ${0.08 + 0.85 * v})`; });
+    $("lap").textContent = (st.t - st.lapStart).toFixed(2) + " s";
+    $("best").textContent = st.bestLap == null ? "--" : st.bestLap.toFixed(2) + " s";
+    $("laps").textContent = st.laps;
+  }
+
+  let last = performance.now(), acc = 0, k = 0;
+  function frame(now) {
+    let dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused) {
+      if (st.lost) {
+        if (lostAt == null) { lostAt = now; setState("lost"); }
+        else if (now - lostAt > 1400) restart();
+      } else {
+        acc += dt * (slow ? 0.25 : 1);
+        while (acc >= CFG.dt) {
+          sim.step(p); acc -= CFG.dt; k++;
+          if (k % 4 === 0) { scopeBuf.push(st.err); if (scopeBuf.length > 600) scopeBuf.shift(); }
+          if (k % 6 === 0) { trail.push([st.x, st.y]); if (trail.length > 160) trail.shift(); }
+          if (st.lost) break;
+        }
+      }
+    }
+    drawField(); drawScope(); updateTelemetry();
+    requestAnimationFrame(frame);
+  }
+  syncInputs();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

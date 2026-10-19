@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 345 210" width="345" height="210" role="img" aria-labelledby="t">
+  <title id="t">Soplón, a slim crimson dragon with cyan sensor eyes, breathing fire with a blue-hot core</title>
+  <defs>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="fireglow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="fOuter" x1="236" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DC143C"/>
+      <stop offset="0.55" stop-color="#FF4500"/>
+      <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fMid" x1="236" y1="0" x2="318" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8C00"/>
+      <stop offset="1" stop-color="#FFC300" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fCore" x1="236" y1="0" x2="292" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E6FFFF"/>
+      <stop offset="0.5" stop-color="#00F0FF"/>
+      <stop offset="1" stop-color="#00F0FF" stop-opacity="0"/>
+    </linearGradient>
+    <style>
+      .blink { animation: blink 5s infinite; transform-origin: 207px 58px; transform-box: view-box; }
+      @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+      .fire { transform-origin: 236px 69px; transform-box: view-box; }
+      .f1 { animation: flick1 0.9s ease-in-out infinite; }
+      .f2 { animation: flick2 0.7s ease-in-out infinite; }
+      .f3 { animation: flick3 0.5s ease-in-out infinite; }
+      @keyframes flick1 { 0%,100% { transform: scale(1,1); } 50% { transform: scale(0.92,1.12); } }
+      @keyframes flick2 { 0%,100% { transform: scale(0.95,1.05); } 50% { transform: scale(1.06,0.9); } }
+      @keyframes flick3 { 0%,100% { transform: scale(1,1); opacity: 1; } 50% { transform: scale(1.12,0.85); opacity: 0.8; } }
+      .wing { animation: flap 4s ease-in-out infinite; transform-origin: 128px 110px; transform-box: view-box; }
+      @keyframes flap { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-4deg); } }
+      .trace { animation: pulse 2.4s ease-in-out infinite; }
+      @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    </style>
+  </defs>
+
+  <!-- tail -->
+  <path d="M74 138 C 50 150, 30 172, 14 160 C 2 150, 8 132, 22 128" fill="none" stroke="#DC143C" stroke-width="9" stroke-linecap="round"/>
+  <path d="M22 128 L 14 112 L 34 120 Z" fill="#8B0A24"/>
+
+  <!-- far legs (behind) -->
+  <path d="M92 146 L 88 176 L 96 182" fill="none" stroke="#8B0A24" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M134 146 L 136 176 L 144 182" fill="none" stroke="#8B0A24" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- wing -->
+  <g class="wing">
+    <path d="M126 112 L 98 36 Q 110 66, 118 70 L 136 22 Q 144 62, 150 68 L 172 44 Q 162 88, 152 110 Z" fill="#A50E2D"/>
+    <g stroke="#8B0A24" stroke-width="3" stroke-linecap="round">
+      <line x1="126" y1="110" x2="98" y2="36"/>
+      <line x1="126" y1="110" x2="136" y2="22"/>
+      <line x1="128" y1="110" x2="172" y2="44"/>
+    </g>
+    <g class="trace" stroke="#00F0FF" stroke-width="1.6" fill="none" filter="url(#glow)">
+      <polyline points="122,92 116,74 108,62"/>
+      <polyline points="136,90 140,64"/>
+      <circle cx="108" cy="61" r="2.2" fill="#00F0FF"/>
+      <circle cx="140" cy="62" r="2.2" fill="#00F0FF"/>
+    </g>
+  </g>
+
+  <!-- body: slim torso -->
+  <path d="M72 134 C 82 114, 128 108, 150 118 C 162 124, 158 142, 144 148 C 120 156, 88 154, 72 134 Z" fill="#DC143C"/>
+  <path d="M86 146 C 104 154, 128 154, 146 144" fill="none" stroke="#F25670" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- neck -->
+  <path d="M142 126 C 166 116, 168 82, 190 66" fill="none" stroke="#DC143C" stroke-width="17" stroke-linecap="round"/>
+  <path d="M152 132 C 172 120, 176 90, 194 74" fill="none" stroke="#F25670" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- spikes -->
+  <g fill="#8B0A24">
+    <path d="M96 116 L 100 104 L 106 114 Z"/>
+    <path d="M112 112 L 117 99 L 123 111 Z"/>
+    <path d="M150 112 L 158 102 L 160 114 Z"/>
+    <path d="M160 96 L 170 88 L 168 100 Z"/>
+    <path d="M170 80 L 180 74 L 178 86 Z"/>
+  </g>
+
+  <!-- near legs -->
+  <ellipse cx="100" cy="142" rx="15" ry="11" fill="#A50E2D"/>
+  <ellipse cx="142" cy="140" rx="10" ry="9" fill="#A50E2D"/>
+  <path d="M100 146 L 102 178 L 112 182" fill="none" stroke="#A50E2D" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M142 144 L 148 176 L 158 180" fill="none" stroke="#A50E2D" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- horns -->
+  <path d="M192 52 C 182 40, 170 34, 160 34 C 170 40, 178 48, 184 58 Z" fill="#8B0A24"/>
+  <path d="M186 58 C 176 52, 166 50, 158 52 C 166 56, 174 60, 180 64 Z" fill="#8B0A24"/>
+
+  <!-- head -->
+  <path d="M182 54 C 194 44, 214 44, 230 54 L 238 62 C 230 66, 214 68, 198 68 C 186 68, 178 62, 182 54 Z" fill="#DC143C"/>
+  <!-- lower jaw, slightly open -->
+  <path d="M190 66 L 234 70 C 228 78, 210 80, 194 74 Z" fill="#A50E2D"/>
+  <circle cx="232" cy="57" r="1.8" fill="#8B0A24"/>
+
+  <!-- eye: glowing sensor -->
+  <ellipse cx="207" cy="58" rx="6" ry="4.6" fill="#0D1117"/>
+  <g class="blink">
+    <circle cx="208" cy="58" r="3.2" fill="#00F0FF" filter="url(#glow)"/>
+    <circle cx="209.3" cy="56.8" r="1" fill="#E6EDF3"/>
+  </g>
+
+  <!-- fire: crimson outer flame, orange body, blue-hot core -->
+  <g filter="url(#fireglow)">
+    <g class="fire f1">
+      <path d="M236 66 C 260 50, 292 46, 336 38 C 312 56, 330 62, 340 70 C 316 74, 328 86, 332 100 C 294 88, 262 84, 236 72 Z" fill="url(#fOuter)"/>
+    </g>
+    <g class="fire f2">
+      <path d="M236 67 C 258 58, 284 54, 314 52 C 300 62, 310 70, 318 74 C 298 78, 272 80, 236 71 Z" fill="url(#fMid)"/>
+    </g>
+    <g class="fire f3">
+      <path d="M236 68 C 252 63, 270 63, 292 66 C 272 72, 254 73, 236 70 Z" fill="url(#fCore)"/>
+    </g>
+  </g>
+</svg>

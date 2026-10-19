@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 14" width="800" height="14" role="img" aria-label="divider">
+  <defs>
+    <linearGradient id="l" x1="0" x2="1"><stop offset="0" stop-color="#DC143C" stop-opacity="0"/><stop offset="0.5" stop-color="#DC143C"/><stop offset="1" stop-color="#DC143C" stop-opacity="0"/></linearGradient>
+    <filter id="g" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <rect x="0" y="6" width="800" height="2" fill="url(#l)"/>
+  <g>
+    <circle cy="7" r="5" fill="#00F0FF" filter="url(#g)"/>
+    <circle cy="7" r="2" fill="#00F0FF"/>
+    <animateTransform attributeName="transform" type="translate" values="80 0;720 0;80 0" dur="6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+  </g>
+</svg>
