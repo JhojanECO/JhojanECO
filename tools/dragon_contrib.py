@@ -2,6 +2,11 @@
 seen from above, eats from the fewest contributions to the most. When he is back
 in his nest the cells grow back and the loop starts again.
 
+The flight is simulated, not drawn: Soplón has a heading and steers towards the
+next cell with a proportional controller, slowing down in tight turns, so every
+change of direction is a smooth arc. The body follows the head's trail by
+distance, like a real serpent.
+
 Runs daily from .github/workflows/profile-stats.yml. To run locally:
     GITHUB_TOKEN=$(gh auth token) python tools/dragon_contrib.py
 """
@@ -35,10 +40,20 @@ NEST = (62, GY + 3.5 * PITCH - 2)
 N = 16                        # body segments
 SPACING = 7.0                 # px between segments
 SNOUT = 22.0                  # px from neck to snout: cells vanish when the snout reaches them
-MAX_TRIP = 32.0               # s, the dragon speeds up when there is a lot to eat
-MIN_SPEED = 230.0             # px / s
 REST = 1.6                    # s in the nest after the cells grow back
 WAVE = 1.0                    # s for the regrow wave to sweep left to right
+
+# flight
+MAX_TRIP = 34.0               # s, Soplón flies faster when there is a lot to eat
+V_START = 240.0               # px / s on straight lines
+TURN_GAIN = 4.5               # 1/s, heading controller: turn rate = gain * heading error
+TURN_MAX = 6.0                # rad / s
+SLOW = 0.2                    # fraction of top speed kept in the sharpest turns
+HEADING_COST = 45.0           # px per rad: prefers the next cell that is ahead of him
+EAT_R = 7.0                   # px, from the head (neck to snout) to the cell centre
+DT = 1 / 120                  # s, simulation step
+TRAIL_STEP = 4.0              # px between points of the recorded trail
+KEY_DT = 0.2                  # s between motion keyframes
 
 QUERY = """
 query($login: String!) {
@@ -79,17 +94,68 @@ def cells_of(cal):
     return cells
 
 
-def eating_order(cells):
-    """Fewest contributions first; among equal counts, always the nearest cell next."""
-    order, cur = [], NEST
-    for n in sorted({c["n"] for c in cells if c["n"] > 0}):
-        left = [c for c in cells if c["n"] == n]
-        while left:
-            nxt = min(left, key=lambda c: math.dist(cur, (c["cx"], c["cy"])))
-            left.remove(nxt)
-            order.append(nxt)
-            cur = (nxt["cx"], nxt["cy"])
-    return order
+def wrap(a):
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def head_dist(c, x, y, th):
+    """Distance from a cell centre to the head, taken as the segment from neck to snout."""
+    px, py = c["cx"] - x, c["cy"] - y
+    along = max(0.0, min(SNOUT, px * math.cos(th) + py * math.sin(th)))
+    return math.dist((px, py), (along * math.cos(th), along * math.sin(th)))
+
+
+def fly(cells, vmax):
+    """Simulates the trip. Returns the trail [(x, y, t)], when each cell was eaten, and the trip time."""
+    food = [c for c in cells if c["n"] > 0]
+    if not food:  # nothing to eat: a short patrol over the middle of the grid
+        food = [{"cx": GX + 26 * PITCH, "cy": GY + 3.5 * PITCH, "n": 1}]
+    x, y = NEST
+    th, t, chase, since = 0.0, 0.0, 0.0, 0.0
+    trail, eaten, target = [(x, y, 0.0)], {}, None
+
+    def pick(sx, sy):
+        lo = min(c["n"] for c in food)
+        return min((c for c in food if c["n"] == lo),
+                   key=lambda c: math.dist((sx, sy), (c["cx"], c["cy"]))
+                   + HEADING_COST * abs(wrap(math.atan2(c["cy"] - sy, c["cx"] - sx) - th)))
+
+    while t < 600:
+        sx, sy = x + SNOUT * math.cos(th), y + SNOUT * math.sin(th)
+        if target is None and food:
+            target, chase = pick(sx, sy), 0.0
+        if target is not None:   # steer the snout onto the cell
+            err = wrap(math.atan2(target["cy"] - sy, target["cx"] - sx) - th)
+        else:                    # steer the neck into the nest
+            err = wrap(math.atan2(NEST[1] - y, NEST[0] - x) - th)
+        wmax = TURN_MAX * (2 if chase > 2.5 else 1)   # never orbit a cell forever
+        th += max(-wmax, min(wmax, TURN_GAIN * err)) * DT
+        v = vmax * (SLOW + (1 - SLOW) * max(0.0, math.cos(err)))
+        x += v * math.cos(th) * DT
+        y += v * math.sin(th) * DT
+        t += DT
+        chase += DT
+        since += v * DT
+        if since >= TRAIL_STEP:
+            trail.append((x, y, t))
+            since = 0.0
+
+        if target is not None:
+            lo = min(c["n"] for c in food)
+            for c in [c for c in food if c["n"] == lo and head_dist(c, x, y, th) < EAT_R]:
+                eaten[id(c)] = t
+                food.remove(c)
+                if c is target:
+                    target = None
+            if target is not None and target not in food:
+                target = None
+        elif math.dist((x, y), NEST) < 5:
+            t += math.dist((x, y), NEST) / v
+            trail.append((NEST[0], NEST[1], t))
+            break
+    if t >= 600:
+        raise SystemExit("Soplón got stuck circling a cell; tune TURN_MAX / SLOW")
+    return trail, eaten, t
 
 
 def fmt(v):
@@ -98,37 +164,43 @@ def fmt(v):
 
 def build(cal):
     cells = cells_of(cal)
-    order = eating_order(cells)
 
-    pts = [NEST] + [(c["cx"], c["cy"]) for c in order] + [NEST]
-    if len(pts) == 2:                       # nothing to eat: a short patrol over the grid
-        pts = [NEST, (GX + 26 * PITCH, GY + 3.5 * PITCH), NEST]
-    seg = [math.dist(a, b) for a, b in zip(pts, pts[1:])]
-    total = sum(seg)
-    speed = max(MIN_SPEED, total / MAX_TRIP)
-    lag = SPACING / speed
-    trip = total / speed
-    home = trip + (N + 1) * lag + 0.25     # tail is inside the nest
-    dur = home + WAVE + REST
+    vmax = V_START
+    while True:
+        trail, eaten, trip = fly(cells, vmax)
+        if trip <= MAX_TRIP or vmax >= 700:
+            break
+        vmax *= min(1.5, trip / MAX_TRIP * 1.03)
 
+    # arc length along the trail, and a keyframe every KEY_DT seconds
     arc = [0.0]
-    for s in seg:
-        arc.append(arc[-1] + s)
-    key_points = [a / total for a in arc] + [1.0]
-    key_times = [a / speed / dur for a in arc] + [1.0]
-    route = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y in pts)
-    motion = (f'calcMode="linear" keyPoints="{";".join(fmt(k) for k in key_points)}" '
-              f'keyTimes="{";".join(fmt(k) for k in key_times)}" rotate="auto"')
+    for a, b in zip(trail, trail[1:]):
+        arc.append(arc[-1] + math.dist(a[:2], b[:2]))
+    total = arc[-1]
+    keys, nxt = [], 0.0
+    for (_, _, t), s in zip(trail, arc):
+        if t >= nxt or t == trip:
+            keys.append((t, s))
+            nxt = t + KEY_DT
+    if keys[-1][0] != trip:
+        keys.append((trip, total))
+    # after the head is home the trail keeps "flowing" into the nest until the tail is in
+    tail_in = (N + 1) * SPACING / (vmax * 0.6)
+    home = trip + tail_in + 0.15
+    dur = home + WAVE + REST
+    keys += [(trip + tail_in, total + (N + 1) * SPACING), (dur, total + (N + 1) * SPACING)]
+    key_times = ";".join(fmt(t / dur) for t, _ in keys)
+
+    route = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y, _ in trail)
 
     # ---- calendar ----
-    eat_at = {id(c): max(0.0, (arc[i + 1] - SNOUT) / speed) for i, c in enumerate(order)}
     grid = []
     for c in cells:
         rect = f'<rect x="{c["x"]}" y="{c["y"]}" width="{CELL}" height="{CELL}" rx="2.5" fill="{c["fill"]}"'
-        if id(c) not in eat_at:
+        if id(c) not in eaten:
             grid.append(rect + "/>")
             continue
-        t0 = eat_at[id(c)] / dur
+        t0 = eaten[id(c)] / dur
         t1 = t0 + 0.12 / dur
         t2 = (home + WAVE * c["w"] / 52) / dur
         grid.append(
@@ -149,16 +221,16 @@ def build(cal):
         legend.append(f'<rect x="{legend_x + i * 15}" y="{H - 28}" width="11" height="11" rx="2.5" fill="{col}"/>')
     legend.append(f'<text x="{legend_x + 5 * 15 + 4}" y="{H - 18}" font-size="11" fill="{MUTED}">More</text>')
 
-    # ---- dragon: every part follows the route; the body runs a little behind the head ----
+    # ---- dragon: every part rides the same trail, `behind` slots back from the head ----
     def follow(inner, behind):
-        # a part `behind` slots back is that much earlier on the same loop
-        begin = behind * lag - dur if behind else 0
+        back = behind * SPACING
+        key_points = ";".join(fmt(min(1.0, max(0.0, (s - back) / total))) for _, s in keys)
         # sideways sway, phase-shifted along the body so it slithers
         amp = 0.6 if not behind else 0.8 + 2.2 * min(1, behind / 6)
         sway = (f'<animateTransform attributeName="transform" type="translate" values="0 {amp:.1f};0 {-amp:.1f};0 {amp:.1f}" '
                 f'dur="0.9s" begin="{-behind * 0.07:.2f}s" repeatCount="indefinite"/>')
-        return (f'<g><g>{inner}{sway}</g><animateMotion path="{route}" dur="{dur:.3f}s" begin="{begin:.3f}s" '
-                f'repeatCount="indefinite" {motion}/></g>')
+        return (f'<g><g>{inner}{sway}</g><animateMotion dur="{dur:.3f}s" repeatCount="indefinite" calcMode="linear" '
+                f'keyPoints="{key_points}" keyTimes="{key_times}" rotate="auto"><mpath href="#trail"/></animateMotion></g>')
 
     body = [follow(segment(i), i + 1) for i in reversed(range(N))]
     dragon = "\n".join(body + [follow(HEAD, 0)])
@@ -175,12 +247,14 @@ def build(cal):
   </g>'''
 
     total_c = cal["totalContributions"]
+    print(f"top speed {vmax:.0f}px/s, trip {trip:.1f}s, loop {dur:.1f}s, trail {len(trail)} pts, {len(keys)} keys")
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-labelledby="t">
   <title id="t">Contribution calendar for the last 12 months ({total_c} contributions). Soplón the dragon leaves his nest, eats the days from the fewest contributions to the most, flies home, and the calendar grows back.</title>
   <defs>
     <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
       <feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <path id="trail" d="{route}"/>
   </defs>
   <rect width="{W}" height="{H}" rx="18" fill="{BG}"/>
   <rect x="0.5" y="0.5" width="{W - 1}" height="{H - 1}" rx="18" fill="none" stroke="{GRID}"/>
