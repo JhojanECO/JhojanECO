@@ -44,15 +44,19 @@ REST = 1.6                    # s in the nest after the cells grow back
 WAVE = 1.0                    # s for the regrow wave to sweep left to right
 
 # flight
-MAX_TRIP = 34.0               # s, Soplón flies faster when there is a lot to eat
+MAX_TRIP = 45.0               # s, Soplón flies faster when there is a lot to eat...
+V_MAX = 300.0                 # px / s ...but never faster than this
 V_START = 240.0               # px / s on straight lines
-TURN_GAIN = 4.5               # 1/s, heading controller: turn rate = gain * heading error
-TURN_MAX = 6.0                # rad / s
-SLOW = 0.2                    # fraction of top speed kept in the sharpest turns
+TURN_GAIN = 6.0               # 1/s, fine heading correction on the straight run
+R_MIN = 22.0                  # px, tightest turn; keeps the body from coiling onto itself
+ANG_ACC = 90.0                # rad/s^2, turns ease in and out instead of snapping
+ALIGN = math.radians(6)       # once this close to the cell's bearing he flies straight at it
+SLOW = 0.65                   # fraction of top speed kept in the sharpest turns
 HEADING_COST = 45.0           # px per rad: prefers the next cell that is ahead of him
 EAT_R = 7.0                   # px, from the head (neck to snout) to the cell centre
 DT = 1 / 120                  # s, simulation step
-TRAIL_STEP = 4.0              # px between points of the recorded trail
+TRAIL_STEP = 3.0              # px between points of the recorded trail...
+TRAIL_TURN = math.radians(3)  # ...or less, so curves stay round
 KEY_DT = 0.2                  # s between motion keyframes
 
 QUERY = """
@@ -106,55 +110,90 @@ def head_dist(c, x, y, th):
 
 
 def fly(cells, vmax):
-    """Simulates the trip. Returns the trail [(x, y, t)], when each cell was eaten, and the trip time."""
+    """Simulates the trip. Returns the trail [(x, y, t)], when each cell was eaten, and the trip time.
+
+    Soplón flies like a plane: he cannot turn tighter than R_MIN. Each manoeuvre is an arc
+    at that radius followed by a straight line (a Dubins curve). If the cell is inside the
+    circle on its own side he banks the other way and swings round in a wide loop; the
+    two circles never overlap, so every cell can be reached.
+    """
     food = [c for c in cells if c["n"] > 0]
     if not food:  # nothing to eat: a short patrol over the middle of the grid
         food = [{"cx": GX + 26 * PITCH, "cy": GY + 3.5 * PITCH, "n": 1}]
     x, y = NEST
-    th, t, chase, since = 0.0, 0.0, 0.0, 0.0
+    th, w, t, since, th_mark = 0.0, 0.0, 0.0, 0.0, 0.0
+    bank = 0                                  # committed turn side: +1 / -1, 0 = flying at the cell
+    escape = False                            # cell too close to swing round: fly straight first
+
+    def circle_clear(side, tx, ty, margin):
+        """True if the target lies outside the turning circle on that side (y points down)."""
+        cx, cy = x - side * R_MIN * math.sin(th), y + side * R_MIN * math.cos(th)
+        return math.dist((cx, cy), (tx, ty)) > margin * R_MIN
     trail, eaten, target = [(x, y, 0.0)], {}, None
 
-    def pick(sx, sy):
+    def pick():
         lo = min(c["n"] for c in food)
         return min((c for c in food if c["n"] == lo),
-                   key=lambda c: math.dist((sx, sy), (c["cx"], c["cy"]))
-                   + HEADING_COST * abs(wrap(math.atan2(c["cy"] - sy, c["cx"] - sx) - th)))
+                   key=lambda c: math.dist((x, y), (c["cx"], c["cy"]))
+                   + HEADING_COST * abs(wrap(math.atan2(c["cy"] - y, c["cx"] - x) - th)))
 
     while t < 600:
-        sx, sy = x + SNOUT * math.cos(th), y + SNOUT * math.sin(th)
         if target is None and food:
-            target, chase = pick(sx, sy), 0.0
-        if target is not None:   # steer the snout onto the cell
-            err = wrap(math.atan2(target["cy"] - sy, target["cx"] - sx) - th)
-        else:                    # steer the neck into the nest
-            err = wrap(math.atan2(NEST[1] - y, NEST[0] - x) - th)
-        wmax = TURN_MAX * (2 if chase > 2.5 else 1)   # never orbit a cell forever
-        th += max(-wmax, min(wmax, TURN_GAIN * err)) * DT
+            target = pick()
+        tx, ty = (target["cx"], target["cy"]) if target is not None else NEST
+        err = wrap(math.atan2(ty - y, tx - x) - th)
         v = vmax * (SLOW + (1 - SLOW) * max(0.0, math.cos(err)))
+
+        w_lim = v / R_MIN
+        side = 1 if err >= 0 else -1          # the short way round
+        brake = w * w / (2 * ANG_ACC)         # angle still turned while the turn unwinds
+        if bank and bank * err <= ALIGN + brake:
+            bank = 0                          # (nearly) lined up: ease out and fly at it
+        elif bank and not circle_clear(bank, tx, ty, 1.1):
+            bank, escape = 0, True            # it slipped inside the turn: go straight first
+        elif not bank and (escape or abs(err) > 3 * ALIGN):
+            # the turn eases in, so its real circle is a bit wider than R_MIN
+            if circle_clear(side, tx, ty, 1.6):
+                bank, escape = side, False
+            elif not escape and circle_clear(-side, tx, ty, 1.6):
+                bank = -side                  # the long way round, in a wide loop
+            else:
+                escape = True
+        # soft walls: if he is about to leave the card, swing back towards the middle
+        ax, ay = x + 34 * math.cos(th), y + 34 * math.sin(th)
+        if not (20 < ax < W - 20 and 56 < ay < H - 22):
+            home_err = wrap(math.atan2(H / 2 - y, W / 2 - x) - th)
+            bank, escape = (1 if home_err >= 0 else -1), False
+        if bank:
+            w_cmd = bank * w_lim
+        elif escape:
+            w_cmd = 0.0
+        else:
+            w_cmd = max(-w_lim, min(w_lim, TURN_GAIN * err))
+        w += max(-ANG_ACC * DT, min(ANG_ACC * DT, w_cmd - w))
+
+        th += w * DT
         x += v * math.cos(th) * DT
         y += v * math.sin(th) * DT
         t += DT
-        chase += DT
         since += v * DT
-        if since >= TRAIL_STEP:
+        if since >= TRAIL_STEP or abs(wrap(th - th_mark)) >= TRAIL_TURN:
             trail.append((x, y, t))
-            since = 0.0
+            since, th_mark = 0.0, th
 
         if target is not None:
             lo = min(c["n"] for c in food)
             for c in [c for c in food if c["n"] == lo and head_dist(c, x, y, th) < EAT_R]:
                 eaten[id(c)] = t
                 food.remove(c)
-                if c is target:
-                    target = None
-            if target is not None and target not in food:
-                target = None
+            if target not in food:
+                target, bank, escape = None, 0, False
         elif math.dist((x, y), NEST) < 5:
             t += math.dist((x, y), NEST) / v
             trail.append((NEST[0], NEST[1], t))
             break
     if t >= 600:
-        raise SystemExit("Soplón got stuck circling a cell; tune TURN_MAX / SLOW")
+        raise SystemExit("Soplón got stuck circling a cell; tune R_MIN / TURN_GAIN")
     return trail, eaten, t
 
 
@@ -168,9 +207,9 @@ def build(cal):
     vmax = V_START
     while True:
         trail, eaten, trip = fly(cells, vmax)
-        if trip <= MAX_TRIP or vmax >= 700:
+        if trip <= MAX_TRIP or vmax >= V_MAX:
             break
-        vmax *= min(1.5, trip / MAX_TRIP * 1.03)
+        vmax = min(V_MAX, vmax * trip / MAX_TRIP * 1.03)
 
     # arc length along the trail, and a keyframe every KEY_DT seconds
     arc = [0.0]
