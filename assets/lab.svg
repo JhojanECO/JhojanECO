@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 224" width="1000" height="224" role="img" aria-labelledby="t">
+  <title id="t">Tune my line follower: an interactive PID lab that runs in the browser. Open it to change Kp, Ki, Kd and base PWM.</title>
+  <defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="1000" height="224" rx="18" fill="#0D1117"/>
+  <rect x="0.5" y="0.5" width="999" height="223" rx="18" fill="none" stroke="#21262D"/>
+  <text x="40" y="52" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#FF4D6D" letter-spacing="2">INTERACTIVE · RUNS IN YOUR BROWSER</text>
+  <text x="40" y="92" font-family="Segoe UI, Helvetica Neue, Arial, DejaVu Sans, sans-serif" font-size="31" font-weight="700" fill="#E6EDF3">Tune my line follower</text>
+  <text y="124" font-family="Segoe UI, Helvetica Neue, Arial, DejaVu Sans, sans-serif" font-size="15" fill="#8B949E"><tspan x="40">Move Kp, Ki, Kd and base PWM and watch the robot hold</tspan><tspan x="40" dy="22">the line or lose it, the same way I tune the real one.</tspan></text>
+  <rect x="40" y="166" width="226" height="36" rx="9" fill="#DC143C"/>
+  <text x="153" y="189" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">OPEN THE PID LAB →</text>
+  <rect x="540" y="28" width="436" height="172" rx="12" fill="#161B22"/>
+  <text x="572" y="66" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#8B949E">Kp</text><rect x="600" y="60" width="280" height="4" rx="2" fill="#21262D"/><rect x="600" y="60" width="146" height="4" rx="2" fill="#DC143C"/><circle cx="746" cy="62" r="6" fill="#00F0FF" filter="url(#glow)"/><text x="932" y="66" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="end">0.08</text><text x="572" y="96" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#8B949E">Ki</text><rect x="600" y="90" width="280" height="4" rx="2" fill="#21262D"/><rect x="600" y="90" width="17" height="4" rx="2" fill="#DC143C"/><circle cx="617" cy="92" r="6" fill="#00F0FF" filter="url(#glow)"/><text x="932" y="96" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="end">0.00</text><text x="572" y="126" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#8B949E">Kd</text><rect x="600" y="120" width="280" height="4" rx="2" fill="#21262D"/><rect x="600" y="120" width="22" height="4" rx="2" fill="#DC143C"/><circle cx="622" cy="122" r="6" fill="#00F0FF" filter="url(#glow)"/><text x="932" y="126" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="end">0.20</text>
+  <clipPath id="panel"><rect x="540" y="28" width="436" height="172" rx="12"/></clipPath>
+  <g clip-path="url(#panel)">
+    <path d="M 520 178 C 600 150, 660 200, 740 176 S 860 150, 980 176" fill="none" stroke="#DC143C" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+    <g>
+      <rect x="-12" y="-9" width="24" height="18" rx="5" fill="#0D1117" stroke="#E6EDF3" stroke-width="1.2"/>
+      <rect x="9" y="-8" width="4" height="16" rx="2" fill="#00F0FF" filter="url(#glow)"/>
+      <animateMotion dur="5s" repeatCount="indefinite" rotate="auto" path="M 520 178 C 600 150, 660 200, 740 176 S 860 150, 980 176"/>
+    </g>
+  </g>
+</svg>

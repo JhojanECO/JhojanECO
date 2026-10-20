@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 492 214" width="492" height="214" role="img" aria-labelledby="t">
+  <title id="t">High-frequency PWM: Timer0, Timer1 and Timer2 set up for fast PWM, with a small API to set each channel's duty cycle directly. Built with C++, ATmega328P, Registers.</title>
+  <defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="492" height="214" rx="16" fill="#0D1117"/>
+  <rect x="0.5" y="0.5" width="491" height="213" rx="16" fill="none" stroke="#21262D"/>
+  <rect x="0" y="28" width="3" height="40" rx="1.5" fill="#DC143C"/>
+  <text x="28" y="42" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#FF4D6D" letter-spacing="2">ATMEGA328P · BARE-METAL</text>
+  <text x="28" y="74" font-family="Segoe UI, Helvetica Neue, Arial, DejaVu Sans, sans-serif" font-size="23" font-weight="700" fill="#E6EDF3">High-frequency PWM</text>
+  <text y="102" font-family="Segoe UI, Helvetica Neue, Arial, DejaVu Sans, sans-serif" font-size="14" fill="#8B949E"><tspan x="28" dy="0">Timer0, Timer1 and Timer2 set up for fast PWM, with a small</tspan><tspan x="28" dy="20">API to set each channel's duty cycle directly.</tspan></text>
+  <rect x="28" y="166" width="44" height="26" rx="13" fill="#161B22" stroke="#21262D"/><text x="50" y="183" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="middle">C++</text><rect x="79.672" y="166" width="94" height="26" rx="13" fill="#161B22" stroke="#21262D"/><text x="127" y="183" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="middle">ATmega328P</text><rect x="181.912" y="166" width="87" height="26" rx="13" fill="#161B22" stroke="#21262D"/><text x="225" y="183" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#E6EDF3" text-anchor="middle">Registers</text>
+  <g transform="translate(436 54)" fill="none" stroke="#00F0FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity="0.9"><path d="M -26 10 H -18 V -10 H -8 V 10 H -2 V -10 H 12 V 10 H 16 V -10 H 26"/></g>
+  <text x="468" y="184" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="12" fill="#00F0FF" text-anchor="end">repo ↗</text>
+</svg>
