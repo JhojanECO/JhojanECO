@@ -91,9 +91,20 @@
   .readout span { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
   .readout strong { font-weight: 500; font-variant-numeric: tabular-nums; }
 
-  .lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
-  @media (max-width: 900px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+  .main-col { display: grid; gap: 16px; min-width: 0; }
+  .lower { display: grid; gap: 20px; }
   #scope { display: block; width: 100%; height: 180px; max-width: 100%; }
+
+  /* Desktop: track, controls, telemetry and the error plot all fit in one screen.
+     The track shrinks with the window height so the plot under it never drops below the fold. */
+  @media (min-width: 901px) {
+    body { padding-block: 20px 32px; }
+    header { grid-template-columns: auto minmax(0, 1fr); align-items: end; column-gap: 36px; }
+    .lede { font-size: 14px; line-height: 1.5; }
+    .stage { display: flex; justify-content: center; }
+    #field { width: clamp(440px, calc((100vh - 420px) * 900 / 520), 100%); }
+    #scope { height: 120px; }
+  }
   pre { margin: 0; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
   pre .k { color: var(--crimson); }
   pre .v { color: var(--cyan); }
@@ -108,19 +119,29 @@
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Line follower · PID tuning bench</div>
-    <h1>PID Line Follower <span>Lab</span></h1>
+    <div class="title">
+      <div class="eyebrow">Line follower · PID tuning bench</div>
+      <h1>PID Line Follower <span>Lab</span></h1>
+    </div>
     <p class="lede">Tune the controller of a differential-drive line follower and watch what each gain does to the left and right motor PWM (0 to 255). The robot reads the tape with an 8-sensor array, the same way a QTR-8 does: position runs from 0 to 7000, and the error is position − 3500.</p>
   </header>
 
   <section class="bench">
-    <div class="stage">
-      <canvas id="field" width="900" height="520" aria-label="Track with the line follower robot"></canvas>
-      <div class="hud">
-        <span class="chip state-run" id="state">Running</span>
-        <span class="chip"><b>lap</b><span id="lap">0.00 s</span></span>
-        <span class="chip"><b>best</b><span id="best">--</span></span>
-        <span class="chip"><b>laps</b><span id="laps">0</span></span>
+    <div class="main-col">
+      <div class="stage">
+        <canvas id="field" width="900" height="520" aria-label="Track with the line follower robot"></canvas>
+        <div class="hud">
+          <span class="chip state-run" id="state">Running</span>
+          <span class="chip"><b>lap</b><span id="lap">0.00 s</span></span>
+          <span class="chip"><b>best</b><span id="best">--</span></span>
+          <span class="chip"><b>laps</b><span id="laps">0</span></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Error over time</h2>
+        <canvas id="scope" width="600" height="180" aria-label="Error signal over the last seconds"></canvas>
+        <p class="hint">A flat line near zero means the robot rides the center of the tape. Waves mean it is oscillating; raise Kd to damp them.</p>
       </div>
     </div>
 
@@ -171,11 +192,6 @@
   </section>
 
   <section class="lower">
-    <div class="card">
-      <h2>Error over time</h2>
-      <canvas id="scope" width="600" height="180" aria-label="Error signal over the last seconds"></canvas>
-      <p class="hint">A flat line near zero means the robot rides the center of the tape. Waves mean it is oscillating; raise Kd to damp them.</p>
-    </div>
     <div class="card">
       <h2>The same loop in C++</h2>
       <pre id="code"></pre>
