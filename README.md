@@ -101,7 +101,3 @@ A browser simulation of my line follower. Change Kp, Ki, Kd and base PWM and wat
   <picture><img src="assets/dragon-contrib.svg" width="100%"
        alt="Contribution calendar for the last 12 months. Soplón the dragon leaves his nest, eats the days from the fewest contributions to the most, flies home, and the calendar grows back." /></picture>
 </p>
-
-<p align="center">
-  <picture><img src="assets/footer.svg" width="100%" alt="End of track: the line-follower robot reaches the finish line." /></picture>
-</p>

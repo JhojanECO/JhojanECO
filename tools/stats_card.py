@@ -1,5 +1,5 @@
 """Builds assets/stats.svg (activity + top languages) from the GitHub GraphQL API,
-in the same palette as the header and footer.
+in the same palette as the header.
 
 Runs daily from .github/workflows/profile-stats.yml. To run locally:
     GITHUB_TOKEN=$(gh auth token) python tools/stats_card.py
